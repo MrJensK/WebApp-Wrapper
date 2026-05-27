@@ -1,6 +1,6 @@
 # SDK Desktop App – Säker Digital Kommunikation (Mac & Windows)
 
-En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som laddar en extern webbadress i en inbyggd webbvy och låser nedladdningar till en förutbestämd mapp per operativsystem.
+En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som laddar en extern webbadress i en inbyggd webbvy och låser nedladdningar till en valbar mapp per operativsystem.
 
 ---
 
@@ -11,6 +11,7 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 - [Förutsättningar](#förutsättningar)
 - [Kom igång](#kom-igång)
 - [Konfiguration](#konfiguration)
+- [Nedladdningsmapp](#nedladdningsmapp)
 - [Bygga för distribution](#bygga-för-distribution)
 - [GitHub Actions CI/CD](#github-actions-cicd)
 - [Kodsignering](#kodsignering)
@@ -23,9 +24,10 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 
 - Öppnar ett fönster med en inbyggd webbläsare som pekar mot `https://sdkwebbapp.vgregion.se/`
 - **Kräver VPN eller företagsnätverket** – om sidan inte är nåbar visas en anpassad offline-sida med automatisk återförsök var 15:e sekund
-- Fångar upp **alla nedladdningsklick** och sparar filerna i en låst mapp – användaren kan inte välja en annan destination
+- Fångar upp **alla nedladdningsklick** och sparar filerna i en låst mapp
+- Användaren kan **välja nedladdningsmapp** via tray-menyn – valet sparas och används vid nästa start
 - Skapar nedladdningsmappen automatiskt om den inte finns
-- Har en **system-tray-ikon** med snabbmeny för att öppna appen, visa nedladdningsmappen och avsluta
+- Har en **system-tray-ikon** med snabbmeny
 
 ---
 
@@ -45,11 +47,12 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 │   ├── icons/                 # App-ikoner i alla storlekar (genereras med npx tauri icon)
 │   ├── src/
 │   │   ├── main.rs            # Entrypoint – anropar bara lib::run()
-│   │   └── lib.rs             # All applogik: webview, nedladdning, tray
+│   │   └── lib.rs             # All applogik: webview, nedladdning, tray, konfiguration
 │   ├── build.rs               # Tauri build-skript
 │   ├── Cargo.toml             # Rust-beroenden
 │   └── tauri.conf.json        # App-namn, identifierare, ikoner, bundle-inställningar
 ├── package.json               # npm-skript och @tauri-apps/cli
+├── TODO.md                    # Kommande funktioner
 └── README.md
 ```
 
@@ -57,9 +60,10 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 
 | Fil | Vad du ändrar där |
 |---|---|
-| `src-tauri/src/lib.rs` | Mål-URL, nedladdningsmappar per OS, tray-meny |
+| `src-tauri/src/lib.rs` | Mål-URL, standard nedladdningsmapp per OS, tray-meny |
 | `src-tauri/tauri.conf.json` | App-namn, bundle-ID, ikonlista |
 | `.github/workflows/build.yml` | CI-konfiguration, signeringssecrets |
+| `dist/offline.html` | Texten och utseendet på offline-sidan |
 
 ---
 
@@ -118,45 +122,23 @@ npm run dev
 
 ## Konfiguration
 
-All konfiguration sker i **`src-tauri/src/lib.rs`**.
-
 ### Ändra mål-URL
 
+I [src-tauri/src/lib.rs](src-tauri/src/lib.rs), rad ~95:
+
 ```rust
-// rad ~50
 let default_url = "https://sdkwebbapp.vgregion.se/".to_string();
 ```
-
-### Ändra nedladdningsmapp per OS
-
-Mapparna är kompileringstidskonstanter – rätt sökväg bränns in i binären per plattform:
-
-```rust
-// rad ~51–60
-let default_download_dir: PathBuf = {
-    #[cfg(target_os = "windows")]
-    { PathBuf::from(r"T:\SDK-nedladdningar\") }
-
-    #[cfg(target_os = "macos")]
-    { PathBuf::from("/Users/Shared/SDK-nedladdningar") }
-
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
-    { dirs_next::download_dir().unwrap_or_else(|| PathBuf::from("/tmp")).join("mini-web-sdk") }
-};
-```
-
-Mappen skapas automatiskt med `create_dir_all` vid appstart om den inte finns.
 
 ### Ändra app-namn
 
 Två ställen behöver matcha:
 
-1. **Fönsterrubrik** – `src-tauri/src/lib.rs` rad ~80:
+1. **Fönsterrubrik** – `lib.rs`:
    ```rust
    .title("SDK - Säker Digital Kommunikation")
    ```
-
-2. **OS-namn** (dock, taskbar, installationsfil) – `src-tauri/tauri.conf.json`:
+2. **OS-namn** (dock, taskbar, installationsfil) – `tauri.conf.json`:
    ```json
    "productName": "SDK - Säker Digital Kommunikation"
    ```
@@ -169,8 +151,40 @@ Förbered en PNG-fil på minst **1024×1024 px** och kör:
 npx tauri icon din-ikon.png
 ```
 
-Kommandot skriver över allt i `src-tauri/icons/` med rätt storlekar för alla plattformar.
-Inget annat behöver ändras – `tauri.conf.json` pekar redan mot `icons/`-mappen.
+Kommandot skriver över allt i `src-tauri/icons/` automatiskt.
+
+---
+
+## Nedladdningsmapp
+
+### Standardvärden (kompileringstid)
+
+Hårdkodade per plattform i `lib.rs` – används om inget annat valts av användaren:
+
+| Plattform | Standardmapp |
+|---|---|
+| Windows | `T:\SDK-nedladdningar\` |
+| macOS | `/Users/Shared/SDK-nedladdningar` |
+
+### Användaren väljer mapp (runtime)
+
+Högerklicka på tray-ikonen → **"Välj nedladdningsmapp…"** öppnar en native mappväljardialog.
+Valet sparas omedelbart och gäller även nästa gång appen startas.
+
+Sparas i:
+
+| Plattform | Sökväg |
+|---|---|
+| macOS | `~/Library/Application Support/mini-web-sdk/config.json` |
+| Windows | `%APPDATA%\mini-web-sdk\config.json` |
+
+För att återställa till standardmappen: ta bort `config.json` och starta om appen.
+
+### Prioritetsordning
+
+```
+Sparad config.json  →  Kompileringstids-standard
+```
 
 ---
 
@@ -189,8 +203,7 @@ Installerarna skapas i:
 | Windows (NSIS exe) | `src-tauri/target/release/bundle/nsis/*.exe` |
 | Windows (MSI) | `src-tauri/target/release/bundle/msi/*.msi` |
 
-> Du kan **inte** cross-kompilera – en Windows-binär måste byggas på Windows och en
-> macOS-binär på macOS. Använd GitHub Actions (se nedan) för att bygga för båda plattformarna.
+> Du kan **inte** cross-kompilera. Använd GitHub Actions för att bygga för båda plattformarna.
 
 ---
 
@@ -212,13 +225,7 @@ git push --tags
 # Eller manuellt via GitHub: Actions → Build → Run workflow
 ```
 
-### Hämta färdiga filer
-
-Efter en lyckad körning finns installerarna under **Actions → ditt bygge → Artifacts**:
-
-- `windows-installer` – `.exe` och `.msi`
-- `macos-aarch64-apple-darwin` – `.dmg` för Apple Silicon
-- `macos-x86_64-apple-darwin` – `.dmg` för Intel Mac
+Filerna laddas upp direkt till GitHub Release och är nedladdningsbara under taggen.
 
 ---
 
@@ -226,13 +233,11 @@ Efter en lyckad körning finns installerarna under **Actions → ditt bygge → 
 
 ### macOS
 
-Utan signering visas en Gatekeeper-dialog första gången appen öppnas.
-Workflow:en använder **ad-hoc-signering** (`-`) som standard, vilket innebär att
-användaren behöver högerklicka → Öppna vid första körning – ingen `xattr`-fix i terminalen krävs.
+Utan signering visas en Gatekeeper-dialog första gången. Workflow:en använder **ad-hoc-signering**
+– användaren behöver högerklicka → Öppna vid första körning.
 
-För att ta bort dialogen helt krävs ett **Apple Developer Program**-konto (~1 300 kr/år)
-med notarisering. Lägg då till följande secrets i GitHub-repot
-(Settings → Secrets and variables → Actions):
+För att ta bort dialogen helt krävs ett **Apple Developer Program**-konto (~1 300 kr/år).
+Lägg till följande secrets i GitHub (Settings → Secrets and variables → Actions):
 
 | Secret | Beskrivning |
 |---|---|
@@ -243,22 +248,18 @@ med notarisering. Lägg då till följande secrets i GitHub-repot
 | `APPLE_PASSWORD` | App-specifikt lösenord från [appleid.apple.com](https://appleid.apple.com) |
 | `APPLE_TEAM_ID` | 10-siffrigt team-ID från [developer.apple.com](https://developer.apple.com) |
 
-Workflow:en aktiverar automatiskt riktig signering när secrets finns – inget annat behöver ändras.
-
 ### Windows
 
-Utan signering visas en SmartScreen-varning ("Windows skyddade din dator").
-Användaren kan klicka **Mer information → Kör ändå**. Varningen försvinner automatiskt
-efter att tillräckligt många användare kört filen (ryktesbaserat).
+Utan signering visas SmartScreen-varning. Klicka **Mer information → Kör ändå**.
+Varningen försvinner automatiskt efter att tillräckligt många kört filen.
 
-För att ta bort varningen direkt krävs ett **Authenticode EV-certifikat**
-från t.ex. DigiCert eller Sectigo (~2 000–4 000 kr/år).
+För att ta bort varningen direkt krävs ett **Authenticode EV-certifikat** (~2 000–4 000 kr/år).
 
 ---
 
 ## Tauri-kommandon (API)
 
-Dessa kommandon kan anropas från webbvyn via `@tauri-apps/api` om det behövs i framtiden:
+Tillgängliga via `invoke` från webbvyn:
 
 ```typescript
 import { invoke } from '@tauri-apps/api/core';
@@ -266,8 +267,11 @@ import { invoke } from '@tauri-apps/api/core';
 // Hämta aktuell nedladdningsmapp
 const dir = await invoke<string>('get_download_dir');
 
-// Sätt ny nedladdningsmapp (skapar mappen om den inte finns)
+// Sätt ny nedladdningsmapp programmatiskt (skapar + sparar)
 await invoke<string>('set_download_dir', { newDir: 'C:\\NyMapp' });
+
+// Kontrollera nätverksåtkomst och navigera till appen om möjligt
+const ok = await invoke<boolean>('retry_connection');
 ```
 
 ---
@@ -277,12 +281,12 @@ await invoke<string>('set_download_dir', { newDir: 'C:\\NyMapp' });
 ### `npm run dev` – "tauri: command not found"
 Kör `npm install` först så att `@tauri-apps/cli` installeras lokalt.
 
-### Appen visar blank sida istället för webbplatsen
-Kontrollera att `default_url` i `lib.rs` är en giltig och nåbar URL.
-Kontrollera även att `dist/index.html` finns – det är ett krav från Tauri även om det är tomt.
+### Appen visar offline-sida fast VPN är ansluten
+Kontrollera att `default_url` i `lib.rs` är korrekt. Stäng och öppna appen igen –
+nätverkskontrollen sker vid start. Klicka "Försök igen" i offline-sidan för att kontrollera på nytt.
 
 ### macOS – "Appen är skadad och kan inte öppnas"
-Ad-hoc-signering är aktiverad i CI men om du bygger lokalt utan signering:
+Ad-hoc-signering är aktiverad i CI. Om du bygger lokalt utan signering:
 ```bash
 xattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikation.app
 ```
@@ -290,9 +294,9 @@ xattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikati
 ### Windows – SmartScreen-varning
 Klicka **Mer information → Kör ändå**. Inget tekniskt fel.
 
-### Bygget misslyckas i CI – "Unable to find web assets"
-Kontrollera att `dist/index.html` är committad till repot (inte listad i `.gitignore`).
-
 ### Nedladdningar sparas på fel ställe
-Kontrollera `default_download_dir` i `lib.rs`. Sökvägen är kompileringstidskonstant –
-appen måste byggas om efter ändringar.
+Välj rätt mapp via tray-menyn → **"Välj nedladdningsmapp…"**.
+Eller ta bort `config.json` (se sökväg ovan) för att återgå till standardmappen.
+
+### Bygget misslyckas i CI – "Unable to find web assets"
+Kontrollera att `dist/index.html` är committad till repot (inte i `.gitignore`).
