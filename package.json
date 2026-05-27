@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Minimal SDK App with locked download folder",
   "scripts": {
-    "tauri": "tauri",
+    "tauri": "npx tauri",
     "dev": "npx tauri dev",
     "build": "npx tauri build"
   },
