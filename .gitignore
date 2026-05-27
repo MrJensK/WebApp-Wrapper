@@ -1,5 +1,5 @@
 node_modules/
 src-tauri/target/
-dist/
+# dist/ är inkluderad (behövs av Tauri, innehåller bara ett tomt skal)
 .DS_Store
 app-icon.png
