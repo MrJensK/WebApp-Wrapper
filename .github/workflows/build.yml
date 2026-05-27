@@ -66,9 +66,7 @@ jobs:
           # Kopiera .app
           cp -r "$APP" "$STAGING/$APP_NAME.app"
 
-          # Lägg till installationsskriptet och instruktioner från repot
-          cp install-from-dmg.command "$STAGING/Installera SDK.command"
-          chmod +x "$STAGING/Installera SDK.command"
+          # Lägg till instruktioner från repot
           cp INSTRUKTIONER.txt "$STAGING/INSTRUKTIONER.txt"
 
           # Symlink till /Applications (standard drag-and-drop-känsla)

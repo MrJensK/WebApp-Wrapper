@@ -5,11 +5,15 @@
 
 INSTALLATION
 ────────────
-1. Dubbelklicka på "Installera SDK.command"
-2. Klicka OK i dialogen som frågar om du vill köra skriptet
-3. Appen installeras automatiskt och startar
+1. Dra "SDK - Säker Digital Kommunikation.app" till mappen
+   "Applications" (pilen i detta fönster).
 
-Det är allt! Appen finns därefter i din Applications-mapp.
+2. Öppna Terminal (Finder → Program → Verktygsprogram → Terminal)
+   och kör följande kommando:
+
+   xattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikation.app
+
+3. Öppna appen från Applications eller Launchpad.
 
 
 KRAV
