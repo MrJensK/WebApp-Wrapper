@@ -53,18 +53,25 @@ jobs:
             -s -k "build" build.keychain
           rm certificate.p12
 
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
+      - name: Build
         run: npx tauri build --target ${{ matrix.target }}
 
-      - name: Build (macOS, ad-hoc-signering)
+      - name: Ad-hoc sign och packa om DMG (macOS)
         if: matrix.os == 'macos-latest'
-        run: npx tauri build --target ${{ matrix.target }}
-        env:
-          # Sätt till din "Developer ID Application: Namn (TEAMID)" för riktig signering.
-          # Lägg då även till APPLE_ID, APPLE_PASSWORD och APPLE_TEAM_ID som GitHub Secrets.
-          # Se README → Kodsignering för instruktioner.
-          APPLE_SIGNING_IDENTITY: "-"
+        run: |
+          BUNDLE="src-tauri/target/${{ matrix.target }}/release/bundle"
+          APP=$(find "$BUNDLE/macos" -maxdepth 1 -name "*.app" | head -1)
+          APP_NAME=$(basename "$APP" .app)
+
+          # Ad-hoc signera .app (utan att trigga notarisering)
+          codesign --force --deep --sign - "$APP"
+
+          # Packa om en ny DMG med den signerade appen
+          hdiutil create \
+            -volname "$APP_NAME" \
+            -srcfolder "$APP" \
+            -ov -format UDZO \
+            "$BUNDLE/dmg/$APP_NAME.dmg"
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
