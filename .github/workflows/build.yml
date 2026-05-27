@@ -36,47 +36,38 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      # ── macOS: importera signeringscertifikat ──────────────────────────────
-      - name: Import Apple certificate
-        if: matrix.os == 'macos-latest' && env.APPLE_CERTIFICATE != ''
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-        run: |
-          echo "$APPLE_CERTIFICATE" | base64 --decode > certificate.p12
-          security create-keychain -p "build" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "build" build.keychain
-          security import certificate.p12 -k build.keychain \
-            -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: \
-            -s -k "build" build.keychain
-          rm certificate.p12
-
+      # ── Windows ────────────────────────────────────────────────────────────
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
         run: npx tauri build --target ${{ matrix.target }}
 
+      # ── macOS ──────────────────────────────────────────────────────────────
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
-        # Tauri ad-hoc-signerar .app men misslyckas alltid vid notarisering utan
-        # Apple Developer-konto. Vi ignorerar felet – .app är korrekt signerad.
-        run: npx tauri build --target ${{ matrix.target }} || true
+        run: npx tauri build --target ${{ matrix.target }}
+        env:
+          # Tom sträng = Tauri hoppar över signering och notarisering helt.
+          # Vi signerar ad-hoc manuellt i nästa steg istället.
+          APPLE_SIGNING_IDENTITY: ""
 
-      - name: Skapa DMG från ad-hoc-signerad app (macOS)
+      - name: Ad-hoc signera och skapa DMG (macOS)
         if: matrix.os == 'macos-latest'
         run: |
           BUNDLE="src-tauri/target/${{ matrix.target }}/release/bundle"
-          APP=$(find "$BUNDLE/macos" -maxdepth 1 -name "*.app" 2>/dev/null | head -1)
+          APP=$(find "$BUNDLE/macos" -maxdepth 1 -name "*.app" | head -1)
 
           if [ -z "$APP" ]; then
-            echo "Fel: ingen .app hittades – bygget misslyckades troligen helt."
+            echo "Fel: ingen .app hittades."
             exit 1
           fi
 
           APP_NAME=$(basename "$APP" .app)
-          mkdir -p "$BUNDLE/dmg"
 
+          # Ad-hoc signera utan Apple Developer-konto
+          codesign --force --deep --sign - "$APP"
+
+          # Skapa DMG med den signerade appen
+          mkdir -p "$BUNDLE/dmg"
           hdiutil create \
             -volname "$APP_NAME" \
             -srcfolder "$APP" \
@@ -85,6 +76,7 @@ jobs:
 
           echo "DMG skapad: $BUNDLE/dmg/$APP_NAME.dmg"
 
+      # ── Ladda upp artefakter ───────────────────────────────────────────────
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
         uses: actions/upload-artifact@v4
