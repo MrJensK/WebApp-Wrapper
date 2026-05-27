@@ -5,6 +5,9 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
+permissions:
+  contents: write   # Krävs för att ladda upp filer till GitHub Release
+
 jobs:
   build:
     strategy:
