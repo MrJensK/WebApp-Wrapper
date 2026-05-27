@@ -56,8 +56,9 @@ jobs:
       - name: Build
         run: npx tauri build --target ${{ matrix.target }}
         env:
-          # Kodsignering (krävs bara om secrets är satta)
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # Om Apple-secrets finns: riktig signering + notarisering
+          # Om de saknas: ad-hoc-signering (ingen terminal-fix krävs av användaren)
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY || '-' }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
