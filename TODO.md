@@ -2,8 +2,8 @@
 
 ## Hög prioritet
 
-### macOS: Låt användaren välja nedladdningsmapp
-**Status:** Ej påbörjad  
+### ~~macOS: Låt användaren välja nedladdningsmapp~~
+**Status:** ✅ Klar  
 **Berörda filer:** `src-tauri/src/lib.rs`, tray-meny
 
 På macOS är nedladdningsmappen hårdkodad till `/Users/Shared/SDK-nedladdningar`.
