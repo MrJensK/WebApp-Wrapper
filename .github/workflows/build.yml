@@ -42,39 +42,16 @@ jobs:
         run: npx tauri build --target ${{ matrix.target }}
 
       # ── macOS ──────────────────────────────────────────────────────────────
+      # GitHub Actions sätter saknade secrets som tomma strängar (""), inte som
+      # avsaknad variabel. Tauri kontrollerar med std::env::var() och tolkar ""
+      # som "credentials finns" → försöker notarisera → kraschar på Team ID.
+      # Lösning: env -u tar bort variablerna helt så Tauri ser dem som frånvarande
+      # → hoppar över notarisering, signerar bara ad-hoc med "-" (standard).
       - name: Build (macOS)
         if: matrix.os == 'macos-latest'
-        run: npx tauri build --target ${{ matrix.target }}
-        env:
-          # Tom sträng = Tauri hoppar över signering och notarisering helt.
-          # Vi signerar ad-hoc manuellt i nästa steg istället.
-          APPLE_SIGNING_IDENTITY: ""
-
-      - name: Ad-hoc signera och skapa DMG (macOS)
-        if: matrix.os == 'macos-latest'
-        run: |
-          BUNDLE="src-tauri/target/${{ matrix.target }}/release/bundle"
-          APP=$(find "$BUNDLE/macos" -maxdepth 1 -name "*.app" | head -1)
-
-          if [ -z "$APP" ]; then
-            echo "Fel: ingen .app hittades."
-            exit 1
-          fi
-
-          APP_NAME=$(basename "$APP" .app)
-
-          # Ad-hoc signera utan Apple Developer-konto
-          codesign --force --deep --sign - "$APP"
-
-          # Skapa DMG med den signerade appen
-          mkdir -p "$BUNDLE/dmg"
-          hdiutil create \
-            -volname "$APP_NAME" \
-            -srcfolder "$APP" \
-            -ov -format UDZO \
-            "$BUNDLE/dmg/$APP_NAME.dmg"
-
-          echo "DMG skapad: $BUNDLE/dmg/$APP_NAME.dmg"
+        run: >
+          env -u APPLE_ID -u APPLE_PASSWORD -u APPLE_TEAM_ID
+          npx tauri build --target ${{ matrix.target }}
 
       # ── Ladda upp artefakter ───────────────────────────────────────────────
       - name: Upload Windows installer
