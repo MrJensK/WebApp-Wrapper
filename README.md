@@ -229,6 +229,40 @@ Filerna laddas upp direkt till GitHub Release och är nedladdningsbara under tag
 
 ---
 
+## Installation för slutanvändare
+
+### macOS – installationsskript (rekommenderat)
+
+Kör detta i terminalen – skriptet laddar ner senaste version, installerar till `/Applications`
+och tar automatiskt bort quarantine-flaggan:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/MrJensK/WebApp-Wrapper/main/install-mac.sh | bash
+```
+
+Skriptet detekterar automatiskt om datorn är Apple Silicon eller Intel.
+
+### macOS – manuell installation
+
+1. Ladda ner rätt `.dmg` från [Releases](https://github.com/MrJensK/WebApp-Wrapper/releases)
+2. Öppna DMG:en och dra appen till `/Applications`
+3. Kör i terminalen:
+```bash
+xattr -rd com.apple.quarantine "/Applications/SDK - Säker Digital Kommunikation.app"
+```
+
+> **Varför behövs detta?** macOS lägger automatiskt en karantänflagga på alla filer som laddas
+> ned från internet. Utan ett Apple Developer-konto och notarisering (se nedan) måste flaggan
+> tas bort manuellt. Installationsskriptet gör detta automatiskt.
+
+### Windows
+
+1. Ladda ner `.exe`-filen från [Releases](https://github.com/MrJensK/WebApp-Wrapper/releases)
+2. Kör installationsfilen
+3. Klicka **Mer information → Kör ändå** om SmartScreen-varning visas
+
+---
+
 ## Kodsignering
 
 ### macOS
@@ -286,9 +320,10 @@ Kontrollera att `default_url` i `lib.rs` är korrekt. Stäng och öppna appen ig
 nätverkskontrollen sker vid start. Klicka "Försök igen" i offline-sidan för att kontrollera på nytt.
 
 ### macOS – "Appen är skadad och kan inte öppnas"
-Ad-hoc-signering är aktiverad i CI. Om du bygger lokalt utan signering:
+Utan Apple Developer-konto + notarisering visar macOS alltid detta för nedladdade appar.
+Använd installationsskriptet (se ovan) eller kör:
 ```bash
-xattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikation.app
+xattr -rd com.apple.quarantine "/Applications/SDK - Säker Digital Kommunikation.app"
 ```
 
 ### Windows – SmartScreen-varning
