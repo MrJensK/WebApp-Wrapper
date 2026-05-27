@@ -83,7 +83,16 @@ jobs:
             "$BUNDLE/dmg/$APP_NAME.dmg"
 
           rm -rf "$STAGING"
-          echo "DMG skapad: $BUNDLE/dmg/$APP_NAME.dmg"
+
+          # Döp om med arkitektur så att båda DMG:erna syns i releasen
+          ARCH="${{ matrix.target }}"
+          if [[ "$ARCH" == "aarch64-apple-darwin" ]]; then
+            LABEL="apple-silicon"
+          else
+            LABEL="intel"
+          fi
+          mv "$BUNDLE/dmg/$APP_NAME.dmg" "$BUNDLE/dmg/$APP_NAME-$LABEL.dmg"
+          echo "DMG skapad: $BUNDLE/dmg/$APP_NAME-$LABEL.dmg"
 
       # ── Publicera till GitHub Release ─────────────────────────────────────────
       - name: Publicera till release (Windows)
