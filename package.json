@@ -1,0 +1,13 @@
+{
+  "name": "mini-web-sdk",
+  "version": "0.1.0",
+  "description": "Minimal Tauri v2 browser with locked download folder",
+  "scripts": {
+    "tauri": "tauri",
+    "dev": "tauri dev",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}
