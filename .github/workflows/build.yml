@@ -36,13 +36,8 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      - name: Build (Windows)
-        if: matrix.os == 'windows-latest'
-        run: npm run build -- -- --target ${{ matrix.target }}
-
-      - name: Build (macOS)
-        if: matrix.os == 'macos-latest'
-        run: npm run build -- -- --target ${{ matrix.target }}
+      - name: Build
+        run: npx tauri build --target ${{ matrix.target }}
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
