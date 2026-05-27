@@ -47,10 +47,17 @@ fn set_download_dir(
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // ── Standardvärden (ändra här eller via GUI) ──────────────────────────
-    let default_url = "https://example.com".to_string();
-    let default_download_dir = dirs_next::download_dir()
-        .unwrap_or_else(|| PathBuf::from("/tmp"))
-        .join("mini-web-sdk");
+    let default_url = "https://sdkwebbapp.vgregion.se/".to_string();
+    let default_download_dir: PathBuf = {
+        #[cfg(target_os = "windows")]
+        { PathBuf::from(r"T:\SDK-nedladdningar\") }
+
+        #[cfg(target_os = "macos")]
+        { PathBuf::from("/Users/Shared/SDK-nedladdningar") }
+
+        #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+        { dirs_next::download_dir().unwrap_or_else(|| PathBuf::from("/tmp")).join("mini-web-sdk") }
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
