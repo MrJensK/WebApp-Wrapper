@@ -77,7 +77,7 @@ pub fn run() {
             let download_dir = default_download_dir.clone();
 
             WebviewWindowBuilder::new(app, "main", url)
-                .title("Mini Web SDK")
+                .title("SDK - Säker Digital Kommunikation")
                 .inner_size(1280.0, 800.0)
                 .resizable(true)
                 // ── Fånga upp alla nedladdningar ────────────────────────
@@ -136,8 +136,15 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let quit_i = MenuItem::with_id(app, "quit", "Avsluta", true, None::<&str>)?;
     let menu = Menu::with_items(app, &[&open_i, &folder_i, &quit_i])?;
 
-    TrayIconBuilder::new()
+    let icon = app.default_window_icon().cloned();
+
+    let mut tray = TrayIconBuilder::new()
         .menu(&menu)
+        .tooltip("SDK - Säker Digital Kommunikation");
+    if let Some(i) = icon {
+        tray = tray.icon(i);
+    }
+    tray
         .on_menu_event(|app, event| match event.id.as_ref() {
             "open" => {
                 if let Some(w) = app.get_webview_window("main") {
@@ -166,7 +173,6 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 }
             }
         })
-        .build(app)?;
-
-    Ok(())
+        .build(app)
+        .map(|_| ())
 }

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "mini-web-sdk",
+  "productName": "SDK - Säker Digital Kommunikation",
   "version": "0.1.0",
   "identifier": "com.mini-web-sdk.app",
   "build": {
