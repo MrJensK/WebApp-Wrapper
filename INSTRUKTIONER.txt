@@ -1,0 +1,38 @@
+╔══════════════════════════════════════════════════════════╗
+║       SDK – Säker Digital Kommunikation                  ║
+║       Installationsguide för macOS                       ║
+╚══════════════════════════════════════════════════════════╝
+
+INSTALLATION
+────────────
+1. Dubbelklicka på "Installera SDK.command"
+2. Klicka OK i dialogen som frågar om du vill köra skriptet
+3. Appen installeras automatiskt och startar
+
+Det är allt! Appen finns därefter i din Applications-mapp.
+
+
+KRAV
+────────────
+• Du måste vara ansluten till företagsnätverket eller via VPN
+  för att kunna använda appen.
+• Om appen visar "Ingen åtkomst" – kontrollera din VPN-anslutning
+  och klicka "Försök igen".
+
+
+NEDLADDNINGSMAPP
+────────────
+Filer du laddar ned via appen sparas i en låst mapp.
+Du kan ändra mappen via systemtray-ikonen (högerklicka på
+appikonen i menyraden) → "Välj nedladdningsmapp…"
+
+
+SUPPORT
+────────────
+Vid problem, kontakta din IT-avdelning eller systemadministratör.
+
+
+VERSION
+────────────
+Senaste version finns alltid på:
+https://github.com/MrJensK/WebApp-Wrapper/releases
