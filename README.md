@@ -231,29 +231,18 @@ Filerna laddas upp direkt till GitHub Release och är nedladdningsbara under tag
 
 ## Installation för slutanvändare
 
-### macOS – installationsskript (rekommenderat)
-
-Kör detta i terminalen – skriptet laddar ner senaste version, installerar till `/Applications`
-och tar automatiskt bort quarantine-flaggan:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/MrJensK/WebApp-Wrapper/main/install-mac.sh | bash
-```
-
-Skriptet detekterar automatiskt om datorn är Apple Silicon eller Intel.
-
-### macOS – manuell installation
+### macOS – via DMG (rekommenderat)
 
 1. Ladda ner rätt `.dmg` från [Releases](https://github.com/MrJensK/WebApp-Wrapper/releases)
-2. Öppna DMG:en och dra appen till `/Applications`
-3. Kör i terminalen:
-```bash
-xattr -rd com.apple.quarantine "/Applications/SDK - Säker Digital Kommunikation.app"
-```
+2. Öppna DMG:en — du ser appen och en fil som heter **"Installera SDK.command"**
+3. Dubbelklicka på **"Installera SDK.command"**
+4. Klicka **OK** i dialogen som frågar om du vill köra skriptet
+5. Terminal öppnas, appen installeras till `/Applications` och startar automatiskt
 
-> **Varför behövs detta?** macOS lägger automatiskt en karantänflagga på alla filer som laddas
-> ned från internet. Utan ett Apple Developer-konto och notarisering (se nedan) måste flaggan
-> tas bort manuellt. Installationsskriptet gör detta automatiskt.
+Skriptet tar bort quarantine-flaggan automatiskt — inget terminal-kommando behövs.
+
+> **Alternativ:** Dra appen till mappen **Applications** som vanligt, men då måste du köra
+> `xattr -rd com.apple.quarantine "/Applications/SDK - Säker Digital Kommunikation.app"` manuellt.
 
 ### Windows
 

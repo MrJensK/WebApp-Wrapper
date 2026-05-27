@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # Krävs för att ladda upp filer till GitHub Release
+  contents: write
 
 jobs:
   build:
@@ -39,24 +39,52 @@ jobs:
       - name: Install npm dependencies
         run: npm install
 
-      # ── Windows ────────────────────────────────────────────────────────────
+      # ── Windows ──────────────────────────────────────────────────────────────
       - name: Build (Windows)
         if: matrix.os == 'windows-latest'
         run: npx tauri build --target ${{ matrix.target }}
 
-      # ── macOS ──────────────────────────────────────────────────────────────
-      # GitHub Actions sätter saknade secrets som tomma strängar (""), inte som
-      # avsaknad variabel. Tauri kontrollerar med std::env::var() och tolkar ""
-      # som "credentials finns" → försöker notarisera → kraschar på Team ID.
-      # Lösning: env -u tar bort variablerna helt så Tauri ser dem som frånvarande
-      # → hoppar över notarisering, signerar bara ad-hoc med "-" (standard).
-      - name: Build (macOS)
+      # ── macOS ─────────────────────────────────────────────────────────────────
+      # Bygg bara .app (ej DMG) – vi skapar en anpassad DMG med installationsskript.
+      # env -u tar bort Apple-variabler helt så att Tauri hoppar över notarisering.
+      - name: Build (macOS, endast .app)
         if: matrix.os == 'macos-latest'
         run: >
           env -u APPLE_ID -u APPLE_PASSWORD -u APPLE_TEAM_ID
-          npx tauri build --target ${{ matrix.target }}
+          npx tauri build --target ${{ matrix.target }} --bundles app
 
-      # ── Publicera till GitHub Release ─────────────────────────────────────
+      - name: Skapa DMG med installationsskript (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          BUNDLE="src-tauri/target/${{ matrix.target }}/release/bundle"
+          APP=$(find "$BUNDLE/macos" -maxdepth 1 -name "*.app" | head -1)
+          APP_NAME=$(basename "$APP" .app)
+
+          # Staging-mapp för DMG-innehållet
+          STAGING=$(mktemp -d)
+
+          # Kopiera .app
+          cp -r "$APP" "$STAGING/$APP_NAME.app"
+
+          # Lägg till installationsskriptet från repot
+          cp install-from-dmg.command "$STAGING/Installera SDK.command"
+          chmod +x "$STAGING/Installera SDK.command"
+
+          # Symlink till /Applications (standard drag-and-drop-känsla)
+          ln -s /Applications "$STAGING/Applications"
+
+          # Skapa DMG
+          mkdir -p "$BUNDLE/dmg"
+          hdiutil create \
+            -volname "$APP_NAME" \
+            -srcfolder "$STAGING" \
+            -ov -format UDZO \
+            "$BUNDLE/dmg/$APP_NAME.dmg"
+
+          rm -rf "$STAGING"
+          echo "DMG skapad: $BUNDLE/dmg/$APP_NAME.dmg"
+
+      # ── Publicera till GitHub Release ─────────────────────────────────────────
       - name: Publicera till release (Windows)
         if: matrix.os == 'windows-latest'
         uses: softprops/action-gh-release@v2
