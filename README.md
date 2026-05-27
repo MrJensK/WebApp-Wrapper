@@ -1,4 +1,4 @@
-# SDK – Säker Digital Kommunikation
+# SDK Desktop App – Säker Digital Kommunikation (Mac & Windows)
 
 En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som laddar en extern webbadress i en inbyggd webbvy och låser nedladdningar till en förutbestämd mapp per operativsystem.
 
@@ -22,6 +22,7 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 ## Vad appen gör
 
 - Öppnar ett fönster med en inbyggd webbläsare som pekar mot `https://sdkwebbapp.vgregion.se/`
+- **Kräver VPN eller företagsnätverket** – om sidan inte är nåbar visas en anpassad offline-sida med automatisk återförsök var 15:e sekund
 - Fångar upp **alla nedladdningsklick** och sparar filerna i en låst mapp – användaren kan inte välja en annan destination
 - Skapar nedladdningsmappen automatiskt om den inte finns
 - Har en **system-tray-ikon** med snabbmeny för att öppna appen, visa nedladdningsmappen och avsluta
@@ -36,7 +37,8 @@ En minimal skrivbordsapplikation byggd med [Tauri v2](https://tauri.app/) som la
 │   └── workflows/
 │       └── build.yml          # CI/CD – bygger för macOS och Windows
 ├── dist/
-│   └── index.html             # Tomt HTML-skal (krävs av Tauri, innehåller ingen logik)
+│   ├── index.html             # Tomt HTML-skal (krävs av Tauri, innehåller ingen logik)
+│   └── offline.html           # Visas när VPN/nätverket saknas
 ├── src-tauri/
 │   ├── capabilities/
 │   │   └── default.json       # Tauri v2 säkerhetspermissions

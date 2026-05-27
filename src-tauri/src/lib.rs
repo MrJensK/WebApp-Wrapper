@@ -10,9 +10,38 @@ use tauri::{
 // ─── Konfigurerbar state ────────────────────────────────────────────────────
 
 struct AppState {
-    #[allow(dead_code)]
     target_url: String,
     download_dir: PathBuf,
+}
+
+// ─── Nätverkskontroll ───────────────────────────────────────────────────────
+
+/// Kontrollerar om en URL är nåbar via en snabb TCP-anslutning (3 s timeout).
+/// Returnerar false om DNS-uppslag eller anslutning misslyckas — t.ex. om VPN saknas.
+fn check_reachable(url: &str) -> bool {
+    use std::net::{TcpStream, ToSocketAddrs};
+    use std::time::Duration;
+
+    let parsed = match url.parse::<url::Url>() {
+        Ok(u) => u,
+        Err(_) => return false,
+    };
+
+    let host = match parsed.host_str() {
+        Some(h) => h,
+        None => return false,
+    };
+
+    let port = parsed.port_or_known_default().unwrap_or(443);
+    let addr_str = format!("{}:{}", host, port);
+
+    match addr_str.to_socket_addrs() {
+        Ok(mut addrs) => addrs
+            .next()
+            .map(|addr| TcpStream::connect_timeout(&addr, Duration::from_secs(3)).is_ok())
+            .unwrap_or(false),
+        Err(_) => false,
+    }
 }
 
 // ─── Tauri-kommandon ────────────────────────────────────────────────────────
@@ -42,12 +71,29 @@ fn set_download_dir(
     Ok(new_dir)
 }
 
+/// Kontrollerar om sidan är nåbar och navigerar dit om den är det.
+/// Anropas från offline-sidan när användaren klickar "Försök igen".
+#[tauri::command]
+fn retry_connection(
+    window: tauri::WebviewWindow,
+    state: tauri::State<Mutex<AppState>>,
+) -> bool {
+    let url = state.lock().unwrap().target_url.clone();
+    if check_reachable(&url) {
+        let _ = window.eval(&format!("window.location.href = '{}'", url));
+        true
+    } else {
+        false
+    }
+}
+
 // ─── Entry point ────────────────────────────────────────────────────────────
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // ── Standardvärden (ändra här eller via GUI) ──────────────────────────
+    // ── Standardvärden ────────────────────────────────────────────────────
     let default_url = "https://sdkwebbapp.vgregion.se/".to_string();
+
     let default_download_dir: PathBuf = {
         #[cfg(target_os = "windows")]
         { PathBuf::from(r"T:\SDK-nedladdningar\") }
@@ -67,20 +113,28 @@ pub fn run() {
             target_url: default_url.clone(),
             download_dir: default_download_dir.clone(),
         }))
-        .invoke_handler(tauri::generate_handler![get_download_dir, set_download_dir])
+        .invoke_handler(tauri::generate_handler![
+            get_download_dir,
+            set_download_dir,
+            retry_connection
+        ])
         .setup(move |app| {
-            // Skapa nedladdningsmappen om den inte finns
             let _ = std::fs::create_dir_all(&default_download_dir);
 
-            // ── Bygg huvud-webview som pekar mot extern URL ──────────────
-            let url = WebviewUrl::External(default_url.parse().expect("Ogiltig URL"));
+            // ── Välj startURL baserat på nätverksåtkomst ─────────────────
+            let start_url = if check_reachable(&default_url) {
+                WebviewUrl::External(default_url.parse().expect("Ogiltig URL"))
+            } else {
+                eprintln!("[nätverk] Sidan ej nåbar – visar offline-sida");
+                WebviewUrl::App("offline.html".into())
+            };
+
             let download_dir = default_download_dir.clone();
 
-            WebviewWindowBuilder::new(app, "main", url)
+            WebviewWindowBuilder::new(app, "main", start_url)
                 .title("SDK - Säker Digital Kommunikation")
                 .inner_size(1280.0, 800.0)
                 .resizable(true)
-                // ── Fånga upp alla nedladdningar ────────────────────────
                 .on_download(move |_webview, event| {
                     match event {
                         DownloadEvent::Requested { url, destination } => {
@@ -88,21 +142,13 @@ pub fn run() {
                                 .file_name()
                                 .map(|n| n.to_owned())
                                 .unwrap_or_else(|| {
-                                    // Fallback: ta filnamn ur URL:en
                                     let seg = url.path_segments()
                                         .and_then(|s| s.last())
                                         .unwrap_or("download");
                                     std::ffi::OsString::from(seg)
                                 });
-
-                            // Peka om till låst mapp
                             *destination = download_dir.join(filename);
-
-                            eprintln!(
-                                "[download] {} → {}",
-                                url,
-                                destination.display()
-                            );
+                            eprintln!("[download] {} → {}", url, destination.display());
                         }
                         DownloadEvent::Finished { url, path, success } => {
                             if success {
@@ -119,9 +165,7 @@ pub fn run() {
                 })
                 .build()?;
 
-            // ── System-tray med snabbmeny ────────────────────────────────
             build_tray(app.handle())?;
-
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -137,7 +181,6 @@ fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let menu = Menu::with_items(app, &[&open_i, &folder_i, &quit_i])?;
 
     let icon = app.default_window_icon().cloned();
-
     let mut tray = TrayIconBuilder::new()
         .menu(&menu)
         .tooltip("SDK - Säker Digital Kommunikation");

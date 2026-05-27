@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ingen åtkomst – SDK</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f2f2f7;
+      color: #1c1c1e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      padding: 56px 48px;
+      max-width: 480px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .icon { font-size: 72px; margin-bottom: 24px; line-height: 1; }
+    h1 { font-size: 22px; font-weight: 600; margin-bottom: 12px; }
+    p {
+      color: #636366;
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    button {
+      background: #007aff;
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 13px 32px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #0071e3; }
+    button:active { background: #0062cc; }
+    button:disabled { background: #aeaeb2; cursor: default; }
+    .status {
+      margin-top: 20px;
+      font-size: 13px;
+      color: #aeaeb2;
+      min-height: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔒</div>
+    <h1>Ingen åtkomst</h1>
+    <p>Du måste vara ansluten till företagsnätverket eller via VPN för att nå SDK</p>
+    <button id="btn" onclick="retry()">Försök igen</button>
+    <div class="status" id="status">Försöker automatiskt om <span id="sec">15</span> sekunder</div>
+  </div>
+
+  <script>
+    let countdown = 15;
+    let timer;
+
+    function startCountdown() {
+      clearInterval(timer);
+      countdown = 15;
+      document.getElementById('sec').textContent = countdown;
+      document.getElementById('status').innerHTML =
+        'Försöker automatiskt om <span id="sec">' + countdown + '</span> sekunder';
+
+      timer = setInterval(() => {
+        countdown--;
+        const sec = document.getElementById('sec');
+        if (sec) sec.textContent = countdown;
+        if (countdown <= 0) {
+          clearInterval(timer);
+          retry();
+        }
+      }, 1000);
+    }
+
+    async function retry() {
+      clearInterval(timer);
+      const btn = document.getElementById('btn');
+      const status = document.getElementById('status');
+      btn.disabled = true;
+      btn.textContent = 'Kontrollerar…';
+      status.textContent = '';
+
+      try {
+        const { invoke } = window.__TAURI__.core;
+        const reachable = await invoke('retry_connection');
+        if (!reachable) {
+          btn.disabled = false;
+          btn.textContent = 'Försök igen';
+          status.textContent = 'Fortfarande ingen åtkomst till nätverket.';
+          startCountdown();
+        }
+        // Om reachable = true navigerar Rust-koden dit automatiskt
+      } catch (e) {
+        // Fallback om Tauri-API inte är tillgängligt
+        btn.disabled = false;
+        btn.textContent = 'Försök igen';
+        startCountdown();
+      }
+    }
+
+    startCountdown();
+  </script>
+</body>
+</html>
