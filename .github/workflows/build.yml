@@ -53,15 +53,18 @@ jobs:
             -s -k "build" build.keychain
           rm certificate.p12
 
-      - name: Build
+      - name: Build (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npx tauri build --target ${{ matrix.target }}
+
+      - name: Build (macOS, ad-hoc-signering)
+        if: matrix.os == 'macos-latest'
         run: npx tauri build --target ${{ matrix.target }}
         env:
-          # Om Apple-secrets finns: riktig signering + notarisering
-          # Om de saknas: ad-hoc-signering (ingen terminal-fix krävs av användaren)
-          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY || '-' }}
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Sätt till din "Developer ID Application: Namn (TEAMID)" för riktig signering.
+          # Lägg då även till APPLE_ID, APPLE_PASSWORD och APPLE_TEAM_ID som GitHub Secrets.
+          # Se README → Kodsignering för instruktioner.
+          APPLE_SIGNING_IDENTITY: "-"
 
       - name: Upload Windows installer
         if: matrix.os == 'windows-latest'
