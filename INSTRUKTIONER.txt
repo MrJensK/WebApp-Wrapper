@@ -8,10 +8,13 @@ INSTALLATION
 1. Dra "SDK - Säker Digital Kommunikation.app" till mappen
    "Applications" (pilen i detta fönster).
 
-2. Öppna Terminal (Finder → Program → Verktygsprogram → Terminal)
+2. För att kunna köra programmet behöver man låsa upp det då det i dagsläget
+   är osignerat.
+   
+   Öppna Terminal (Finder → Program → Verktygsprogram → Terminal)
    och kör följande kommando:
 
-   xattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikation.app
+   ßxattr -d com.apple.quarantine /Applications/SDK\ -\ Säker\ Digital\ Kommunikation.app
 
 3. Öppna appen från Applications eller Launchpad.
 
@@ -33,7 +36,6 @@ appikonen i menyraden) → "Välj nedladdningsmapp…"
 
 SUPPORT
 ────────────
-Vid problem, kontakta din IT-avdelning eller systemadministratör.
 
 
 VERSION
